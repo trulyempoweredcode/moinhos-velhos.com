@@ -247,6 +247,17 @@
     });
   }
 
+  /* ---------- gallery videos: 12 at a time ---------- */
+  var moreVid = $$("button").filter(function (b) { return /^Show more videos/.test(b.textContent.trim()); })[0];
+  if (moreVid) {
+    moreVid.addEventListener("click", function () {
+      var hidden = $$("figure[data-more-videos][hidden]");
+      hidden.slice(0, 12).forEach(function (f) { f.hidden = false; });
+      var left = hidden.length - 12;
+      if (left <= 0) moreVid.parentNode.hidden = true; else moreVid.textContent = "Show more videos (" + left + " more)";
+    });
+  }
+
   /* ---------- reviews widget (Trustindex, the client's own account) ---------- */
   var ti = $("[data-trustindex]");
   if (ti && !ti.getAttribute("data-ti-loaded")) {
