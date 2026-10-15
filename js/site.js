@@ -280,7 +280,8 @@
       var f = form.elements;
       var data = { name: f.name.value, email: f.email.value, message: f.message.value, optIn: !!(f.optIn && f.optIn.checked) };
       submit.disabled = true; submit.textContent = "Sending…";
-      fetch(form.getAttribute("data-endpoint"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+      var ep = form.getAttribute("data-endpoint"), base = ((window.MV_CONFIG && window.MV_CONFIG.apiBase) || "").replace(/\/$/, "");
+      fetch(ep.indexOf("/api/") === 0 ? base + ep : ep, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
         .then(function (r) { if (!r.ok) throw new Error("Request failed"); form.hidden = true; var ok = doc.getElementById("contact-sent"); if (ok) ok.hidden = false; form.reset(); })
         .catch(function () { submit.textContent = "Something went wrong - please email detox@moinhos-velhos.com"; setTimeout(function () { submit.textContent = orig; }, 5000); })
         .then(function () { submit.disabled = false; if (submit.textContent === "Sending…") submit.textContent = orig; });
