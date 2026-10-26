@@ -619,3 +619,5 @@
 /yogajournal.htm
 /yogap.htm
 /zapping.htm
+/accommodation/
+/costs-and-dates/
