@@ -349,7 +349,15 @@
     + ".mv-pop__body{padding:24px 24px 28px}"
     + ".mv-pop__body .mv-nl__title{font-size:30px}"
     + ".mv-pop__close{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:999px;border:0;background:rgba(255,255,255,.95);color:var(--brand-ink);font-size:26px;line-height:1;cursor:pointer;box-shadow:0 6px 16px -6px rgba(7,51,73,.4)}"
-    + ".mv-pop__close:focus-visible{outline:3px solid var(--brand-deep);outline-offset:2px}";
+    + ".mv-pop__close:focus-visible{outline:3px solid var(--brand-deep);outline-offset:2px}"
+    /* phones get a small bar instead of the pop-up: it never locks the page or covers it */
+    + ".mv-bar{position:fixed;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:45;display:flex;align-items:center;gap:10px;padding:10px 6px 10px 18px;background:var(--brand-ink);color:#fff;border-radius:18px;box-shadow:0 16px 40px -12px rgba(7,51,73,.6);transition:transform .35s,opacity .35s}"
+    + ".mv-nl .mv-nl__form{scroll-margin-top:96px}"
+    + ".mv-bar.is-off{transform:translateY(24px);opacity:0;pointer-events:none}"
+    + ".mv-bar__text{flex:1;margin:0;font-size:16px;line-height:1.3;font-weight:600}"
+    + ".mv-bar__go{flex:none;border:0;border-radius:999px;background:var(--leaf);color:#fff;font:inherit;font-size:16px;font-weight:600;padding:10px 18px;cursor:pointer}"
+    + ".mv-bar__x{flex:none;width:44px;height:44px;border:0;background:transparent;color:#fff;font-size:26px;line-height:1;cursor:pointer}"
+    + ".mv-bar button:focus-visible{outline:3px solid #fff;outline-offset:2px}";
   var st = doc.createElement("style"); st.textContent = css; doc.head.appendChild(st);
 
   var uid = 0;
@@ -372,7 +380,11 @@
       + '<p class="mv-nl__lead">' + COPY.lead + '</p>';
   }
 
-  function joined() { store.set("joined"); var p = doc.querySelector(".mv-pop"); if (p && !p.hidden) setTimeout(closePop, 2600); }
+  function joined() {
+    store.set("joined");
+    var p = doc.querySelector(".mv-pop"); if (p && !p.hidden) setTimeout(closePop, 2600);
+    var b = doc.querySelector(".mv-bar"); if (b) b.remove();
+  }
 
   function bind(form) {
     var btn = form.querySelector("button"), msg = form.querySelector(".mv-nl__msg"), label = btn.textContent;
@@ -430,10 +442,30 @@
     if (store.get() !== "joined") store.set(String(Date.now()));
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
+  function openBar() {
+    var bar = doc.createElement("div");
+    bar.className = "mv-bar is-off"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Newsletter offer");
+    bar.innerHTML = '<p class="mv-bar__text">Get 5% off your first retreat</p>'
+      + '<button type="button" class="mv-bar__go">Sign up</button>'
+      + '<button type="button" class="mv-bar__x" aria-label="Close">&times;</button>';
+    doc.body.appendChild(bar);
+    function done() { if (store.get() !== "joined") store.set(String(Date.now())); bar.remove(); }
+    bar.querySelector(".mv-bar__x").addEventListener("click", done);
+    bar.querySelector(".mv-bar__go").addEventListener("click", function () {
+      done();
+      band.querySelector("input[name=FNAME]").focus({ preventScroll: true }); // inside the tap, so the phone keyboard opens
+      band.querySelector("form").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    // step aside while the sign-up band itself is on screen
+    var r = band.getBoundingClientRect(), near = r.top < window.innerHeight && r.bottom > 0;
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { near = en[0].isIntersecting; bar.classList.toggle("is-off", near); }).observe(band);
+    setTimeout(function () { if (!near) bar.classList.remove("is-off"); }, 60); // a beat later, so it slides in
+  }
   function openPop() {
     if (pop || store.get() === "joined") return;
     var bandForm = band.querySelector("form");
     if (bandForm && bandForm.contains(doc.activeElement)) return; // already signing up below
+    if (window.matchMedia("(max-width: 39.99rem)").matches) { pop = true; openBar(); return; }
     pop = doc.createElement("div");
     pop.className = "mv-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-modal", "true"); pop.setAttribute("aria-labelledby", "mv-pop-title");
     pop.innerHTML = '<div class="mv-pop__card"><button type="button" class="mv-pop__close" aria-label="Close">&times;</button>'
