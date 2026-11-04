@@ -288,3 +288,178 @@
     });
   }
 })();
+
+/* ---------- newsletter: band above the footer + one-time pop-up (Richard, 30-10-2026) ----------
+   Signs people up to the Moinhos Velhos Mailchimp audience through its embedded form's JSONP endpoint,
+   so the visitor never leaves the page. The 5% code (WELCOME5) goes out in Mailchimp's welcome email.
+   Not shown on the booking pages, so nothing interrupts a booking. */
+(function () {
+  var doc = document, path = location.pathname;
+  if (/\/book(\/|$)/.test(path)) return;
+  var footer = doc.querySelector("footer");
+  if (!footer) return;
+
+  var MC = "https://moinhos-velhos.us12.list-manage.com/subscribe/post-json?u=7231362f0011a6405e818c5c6&id=a61427e01a&f_id=00378ae3f0";
+  var TRAP = "b_7231362f0011a6405e818c5c6_a61427e01a";
+  var COPY = {
+    eyebrow: "A little something for your first retreat",
+    title: "Enjoy 5% off your first retreat",
+    lead: "Join our newsletter and we'll email you a 5% code to use on your first booking.",
+    button: "Get my 5% discount",
+    small: "By signing up you agree to receive our emails. You can unsubscribe at any time."
+  };
+  var KEY = "mv-newsletter"; // "joined" for good, or the time the pop-up was closed
+  var store = {
+    get: function () { try { return localStorage.getItem(KEY); } catch (e) { return null; } },
+    set: function (v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+  };
+  var site = (function () {
+    var s = doc.querySelector('script[src*="js/site.js"]');
+    return s ? s.src.replace(/js\/site\.js.*$/, "") : "/";
+  })();
+
+  var css = ""
+    + ".mv-nl{background:var(--mist);padding:56px 16px}"
+    + ".mv-nl__inner{max-width:72rem;margin:0 auto;display:grid;gap:28px;align-items:center}"
+    + "@media(min-width:64rem){.mv-nl{padding:72px 32px}.mv-nl__inner{grid-template-columns:1fr 1fr;gap:56px}}"
+    + ".mv-nl__eyebrow{font-size:16px;font-style:italic;font-weight:600;color:var(--brand-deep);margin:0 0 10px}"
+    + ".mv-nl__title{font-size:34px;line-height:1.1;font-weight:600;color:var(--brand-ink);margin:0}"
+    + "@media(min-width:40rem){.mv-nl__title{font-size:42px}}"
+    + ".mv-nl__lead{font-size:17px;line-height:1.6;color:rgba(16,34,46,.75);margin:14px 0 0}"
+    + ".mv-nl__row{display:grid;gap:12px}"
+    + "@media(min-width:40rem){.mv-nl__row{grid-template-columns:1fr 1fr}}"
+    + ".mv-nl__field{display:block}"
+    + ".mv-nl__label{display:block;font-size:16px;font-weight:600;color:var(--brand-ink);margin-bottom:6px}"
+    + ".mv-nl__input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:13px 16px;border:1.5px solid rgba(16,34,46,.18);border-radius:12px;background:#fff;color:var(--ink)}"
+    + ".mv-nl__input:focus{outline:none;border-color:var(--brand-deep);box-shadow:0 0 0 3px rgba(12,124,171,.18)}"
+    + ".mv-nl__btn{margin-top:14px;width:100%;justify-content:center;border:0;cursor:pointer;font-size:16px}"
+    + ".mv-nl__btn[disabled]{opacity:.7;cursor:wait}"
+    + ".mv-nl__msg{font-size:16px;line-height:1.5;margin:12px 0 0;min-height:1px}"
+    + ".mv-nl__msg.is-ok{color:var(--leaf-deep);font-weight:600}.mv-nl__msg.is-err{color:#b42318}"
+    + ".mv-nl__small{font-size:16px;line-height:1.5;color:rgba(16,34,46,.6);margin:12px 0 0}"
+    + ".mv-nl__trap{position:absolute;left:-5000px}"
+    + ".mv-pop{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(7,51,73,.55);padding:0}"
+    + "@media(min-width:40rem){.mv-pop{align-items:center;padding:24px}}"
+    + ".mv-pop[hidden]{display:none}"
+    + ".mv-pop__card{position:relative;width:100%;max-width:520px;max-height:92vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 32px 64px -24px rgba(7,51,73,.5)}"
+    + "@media(min-width:40rem){.mv-pop__card{border-radius:24px}}"
+    + ".mv-pop__img{display:block;width:100%;height:140px;object-fit:cover}"
+    + "@media(min-width:40rem){.mv-pop__img{height:180px}}"
+    + ".mv-pop__body .mv-nl__form{margin-top:20px}"
+    + ".mv-pop__body{padding:24px 24px 28px}"
+    + ".mv-pop__body .mv-nl__title{font-size:30px}"
+    + ".mv-pop__close{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:999px;border:0;background:rgba(255,255,255,.95);color:var(--brand-ink);font-size:26px;line-height:1;cursor:pointer;box-shadow:0 6px 16px -6px rgba(7,51,73,.4)}"
+    + ".mv-pop__close:focus-visible{outline:3px solid var(--brand-deep);outline-offset:2px}";
+  var st = doc.createElement("style"); st.textContent = css; doc.head.appendChild(st);
+
+  var uid = 0;
+  function formHtml() {
+    uid++;
+    return '<form class="mv-nl__form" novalidate>'
+      + '<div class="mv-nl__row">'
+      + '<label class="mv-nl__field"><span class="mv-nl__label">First name</span><input class="mv-nl__input" type="text" name="FNAME" autocomplete="given-name" id="mv-nl-n' + uid + '"></label>'
+      + '<label class="mv-nl__field"><span class="mv-nl__label">Email</span><input class="mv-nl__input" type="email" name="EMAIL" autocomplete="email" required id="mv-nl-e' + uid + '"></label>'
+      + '</div>'
+      + '<div class="mv-nl__trap" aria-hidden="true"><input type="text" name="' + TRAP + '" tabindex="-1" value=""></div>'
+      + '<button type="submit" class="mv-nl__btn inline-flex items-center gap-2 font-semibold text-sm uppercase tracking-wider px-7 py-3.5 rounded-full transition-all duration-300 bg-leaf text-white hover:bg-leaf-deep">' + COPY.button + '</button>'
+      + '<p class="mv-nl__msg" role="status" aria-live="polite"></p>'
+      + '<p class="mv-nl__small">' + COPY.small + '</p>'
+      + '</form>';
+  }
+  function copyHtml(tag, id) {
+    return '<p class="mv-nl__eyebrow">' + COPY.eyebrow + '</p>'
+      + '<' + tag + ' class="mv-nl__title font-display" id="' + id + '">' + COPY.title + '</' + tag + '>'
+      + '<p class="mv-nl__lead">' + COPY.lead + '</p>';
+  }
+
+  function joined() { store.set("joined"); var p = doc.querySelector(".mv-pop"); if (p && !p.hidden) setTimeout(closePop, 2600); }
+
+  function bind(form) {
+    var btn = form.querySelector("button"), msg = form.querySelector(".mv-nl__msg"), label = btn.textContent;
+    function say(text, ok) { msg.textContent = text; msg.className = "mv-nl__msg " + (ok ? "is-ok" : "is-err"); }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var email = form.EMAIL.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { say("Please enter a valid email address.", false); form.EMAIL.focus(); return; }
+      if (form[TRAP].value) return;
+      btn.disabled = true; btn.textContent = "Signing you up…"; say("", true);
+      var cb = "mvNl" + Date.now(), s = doc.createElement("script"), done = false;
+      var timer = setTimeout(function () { finish({ result: "error", msg: "" }); }, 12000);
+      function finish(r) {
+        if (done) return; done = true; clearTimeout(timer);
+        try { delete window[cb]; } catch (x) { window[cb] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+        btn.disabled = false; btn.textContent = label;
+        var m = String(r && r.msg || "").toLowerCase();
+        if (r && r.result === "success") {
+          say(m.indexOf("confirm") > -1
+            ? "Almost done! Please check your inbox and confirm your email address."
+            : "Thank you for joining! Look out for your 5% code in your inbox.", true);
+          form.reset(); joined();
+        } else if (m.indexOf("already subscribed") > -1) {
+          say("You're already on our list. Thank you!", true); joined();
+        } else if (m.indexOf("too many") > -1) {
+          say("Thanks! That address was signed up recently, so please check your inbox.", true);
+        } else if (/^\d+ - /.test(m) || m.indexOf("email address") > -1) { // Mailchimp field errors, e.g. "0 - An email address must contain a single @."
+          say("Please check your email address and try again.", false);
+        } else {
+          say("Sorry, that didn't go through. Please try again in a moment.", false);
+        }
+      }
+      window[cb] = finish;
+      s.onerror = function () { finish({ result: "error", msg: "" }); };
+      s.src = MC + "&c=" + cb + "&EMAIL=" + encodeURIComponent(email) + "&FNAME=" + encodeURIComponent(form.FNAME.value.trim()) + "&" + TRAP + "=";
+      doc.body.appendChild(s);
+    });
+  }
+
+  /* the band, on every page above the footer */
+  var band = doc.createElement("section");
+  band.className = "mv-nl"; band.setAttribute("aria-labelledby", "mv-nl-title");
+  band.innerHTML = '<div class="mv-nl__inner"><div>' + copyHtml("h2", "mv-nl-title") + "</div>" + formHtml() + "</div>";
+  footer.parentNode.insertBefore(band, footer);
+  bind(band.querySelector("form"));
+
+  /* the pop-up: once per visitor, after a short delay or half a page of scrolling; quiet for 60 days if closed */
+  var seen = store.get();
+  if (seen === "joined" || (seen && Date.now() - Number(seen) < 60 * 864e5)) return;
+  var pop, lastFocus;
+  function closePop() {
+    if (!pop || pop.hidden) return;
+    pop.hidden = true; doc.documentElement.style.overflow = "";
+    if (store.get() !== "joined") store.set(String(Date.now()));
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function openPop() {
+    if (pop || store.get() === "joined") return;
+    var bandForm = band.querySelector("form");
+    if (bandForm && bandForm.contains(doc.activeElement)) return; // already signing up below
+    pop = doc.createElement("div");
+    pop.className = "mv-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-modal", "true"); pop.setAttribute("aria-labelledby", "mv-pop-title");
+    pop.innerHTML = '<div class="mv-pop__card"><button type="button" class="mv-pop__close" aria-label="Close">&times;</button>'
+      + '<img class="mv-pop__img" src="' + site + 'images/hero-poster-w640.webp" alt="" width="640" height="360">'
+      + '<div class="mv-pop__body">' + copyHtml("h2", "mv-pop-title") + formHtml() + "</div></div>";
+    doc.body.appendChild(pop);
+    lastFocus = doc.activeElement; doc.documentElement.style.overflow = "hidden";
+    bind(pop.querySelector("form"));
+    pop.querySelector(".mv-pop__close").addEventListener("click", closePop);
+    pop.addEventListener("click", function (e) { if (e.target === pop) closePop(); });
+    doc.addEventListener("keydown", function (e) {
+      if (pop.hidden) return;
+      if (e.key === "Escape") { closePop(); return; }
+      if (e.key === "Tab") { // keep focus inside the dialog
+        var f = [].slice.call(pop.querySelectorAll("button,input:not([tabindex='-1'])")), a = f[0], z = f[f.length - 1];
+        if (e.shiftKey && doc.activeElement === a) { e.preventDefault(); z.focus(); }
+        else if (!e.shiftKey && doc.activeElement === z) { e.preventDefault(); a.focus(); }
+      }
+    });
+    // focus the close button, not a field, so a phone keyboard does not jump up uninvited
+    setTimeout(function () { pop.querySelector(".mv-pop__close").focus({ preventScroll: true }); }, 50);
+  }
+  var t = setTimeout(openPop, 15000);
+  function onScroll() {
+    var h = doc.documentElement;
+    if (h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) > 0.5) { clearTimeout(t); window.removeEventListener("scroll", onScroll); openPop(); }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+})();
