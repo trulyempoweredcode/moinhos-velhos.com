@@ -3,10 +3,11 @@
       so a retreat added, closed or put on sale in the booking admin shows here by itself.
       Whole months are shown open until at least OPEN_MIN retreats are on view; later months
       are folded, one per month, so a month's count is always its real count.
-   2) 2027 prices: each [data-eb-full] holds the full price (the client edits it on the page).
-      When the table carries data-eb-percent, the full price is shown crossed out with the
-      Early Bird price under it, rounded to whole euros exactly as the booking system rounds
-      a sale (Pricing::salePrice). Remove data-eb-percent and the table shows full prices only. */
+   2) 2027 prices: read live from MV_CONFIG.apiBase + /api/prices?year=2027 (livePrices below),
+      which the client sets in the booking admin, so the table always matches checkout.
+      Only if that request fails, the prices typed in the page are used: with data-eb-percent the
+      full price is shown crossed out with the Early Bird price under it, rounded to whole euros
+      exactly as the booking system rounds a sale (Pricing::salePrice). */
 (function () {
   "use strict";
 
@@ -127,6 +128,55 @@
     });
   }
 
-  function start() { loadDates(); earlyBird(); }
+  /* Live prices: the table follows the booking admin (Rooms & prices > Prices for retreats starting
+     in YEAR), so the page always shows what checkout charges. The Early Bird columns and banner
+     follow the sale on that year's retreats; no 3-night prices hides the 3-night column. */
+  function setCell(td, full, sale) {
+    var el = td.querySelector("[data-eb-full]");
+    if (!el) { return; }
+    var out = td.querySelector("[data-eb-calc]");
+    el.textContent = full == null ? "" : euro(full);
+    if (sale != null && full != null) {
+      if (!out) {
+        out = document.createElement("span");
+        out.setAttribute("data-eb-calc", "");
+        out.className = "block font-display text-lg font-semibold text-brand-ink";
+        td.appendChild(out);
+      }
+      out.textContent = euro(sale);
+      el.className = "block text-sm sm:text-base font-normal text-ink/55 line-through";
+    } else {
+      if (out) { out.parentNode.removeChild(out); }
+      el.className = "font-display text-xl font-semibold text-brand-ink";
+    }
+  }
+
+  function livePrices() {
+    var t = document.querySelector("[data-price-year]");
+    if (!t || !window.fetch) { earlyBird(); return; }
+    var base = (window.MV_CONFIG && window.MV_CONFIG.apiBase) || "https://book.moinhos-velhos.com";
+    fetch(base + "/api/prices?year=" + encodeURIComponent(t.getAttribute("data-price-year")), { headers: { Accept: "application/json" } })
+      .then(function (res) { if (!res.ok) { throw new Error(res.status); } return res.json(); })
+      .then(function (d) {
+        var byId = {}, any3 = false;
+        (d.types || []).forEach(function (x) { byId[x.id] = x; if (x.price3 != null) { any3 = true; } });
+        var eb = d.earlyBird;
+        Array.prototype.forEach.call(t.querySelectorAll("tr[data-type]"), function (tr) {
+          var x = byId[tr.getAttribute("data-type")];
+          if (!x) { return; }
+          ["3", "7", "10"].forEach(function (n) {
+            var td = tr.querySelector('[data-n="' + n + '"]');
+            if (td) { setCell(td, x["price" + n], eb ? x["sale" + n] : null); }
+          });
+        });
+        Array.prototype.forEach.call(t.querySelectorAll('[data-n="3"]'), function (c) { c.style.display = any3 ? "" : "none"; });
+        var sec = t.closest ? t.closest("section") : document;
+        Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-banner], [data-eb-note]"), function (b) { b.style.display = eb ? "" : "none"; });
+        if (eb) { Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-pct]"), function (p) { p.textContent = eb.percent + "%"; }); }
+      })
+      .catch(earlyBird);
+  }
+
+  function start() { loadDates(); livePrices(); }
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", start); } else { start(); }
 })();
