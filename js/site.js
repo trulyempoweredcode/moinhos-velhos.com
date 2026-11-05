@@ -462,6 +462,7 @@
     setTimeout(function () { if (!near) bar.classList.remove("is-off"); }, 60); // a beat later, so it slides in
   }
   function openPop() {
+    if (window.__CE_CFG) return; // inside the click-to-edit editor: it takes every click, so the close button could never work
     if (pop || store.get() === "joined") return;
     var bandForm = band.querySelector("form");
     if (bandForm && bandForm.contains(doc.activeElement)) return; // already signing up below
