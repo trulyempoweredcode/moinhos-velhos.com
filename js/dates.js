@@ -3,8 +3,8 @@
       so a retreat added, closed or put on sale in the booking admin shows here by itself.
       Whole months are shown open until at least OPEN_MIN retreats are on view; later months
       are folded, one per month, so a month's count is always its real count.
-   2) 2027 prices: read live from MV_CONFIG.apiBase + /api/prices?year=2027 (livePrices below),
-      which the client sets in the booking admin, so the table always matches checkout.
+   2) Price tables (2026 and 2027, one per data-price-year): read live from MV_CONFIG.apiBase + /api/prices?year=YEAR
+      (livePrices below), which the client sets in the booking admin, so each table always matches checkout.
       Only if that request fails, the prices typed in the page are used: with data-eb-percent the
       full price is shown crossed out with the Early Bird price under it, rounded to whole euros
       exactly as the booking system rounds a sale (Pricing::salePrice). */
@@ -158,8 +158,12 @@
   }
 
   function livePrices() {
-    var t = document.querySelector("[data-price-year]");
-    if (!t || !window.fetch) { earlyBird(); return; }
+    var tables = document.querySelectorAll("[data-price-year]");
+    if (!tables.length || !window.fetch) { earlyBird(); return; }
+    Array.prototype.forEach.call(tables, liveTable);
+  }
+
+  function liveTable(t) {
     var base = (window.MV_CONFIG && window.MV_CONFIG.apiBase) || "https://book.moinhos-velhos.com";
     fetch(base + "/api/prices?year=" + encodeURIComponent(t.getAttribute("data-price-year")), { headers: { Accept: "application/json" } })
       .then(function (res) { if (!res.ok) { throw new Error(res.status); } return res.json(); })
@@ -178,7 +182,10 @@
         Array.prototype.forEach.call(t.querySelectorAll('[data-n="3"]'), function (c) { c.style.display = any3 ? "" : "none"; });
         var sec = t.closest ? t.closest("section") : document;
         Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-banner], [data-eb-note]"), function (b) { b.style.display = eb ? "" : "none"; });
-        if (eb) { Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-pct]"), function (p) { p.textContent = eb.percent + "%"; }); }
+        if (eb) {
+          Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-pct]"), function (p) { p.textContent = eb.percent + "%"; });
+          Array.prototype.forEach.call((sec || document).querySelectorAll("[data-eb-label]"), function (p) { if (eb.label) { p.textContent = eb.label; } });
+        }
       })
       .catch(earlyBird);
   }
