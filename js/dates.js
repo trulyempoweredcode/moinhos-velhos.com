@@ -33,7 +33,8 @@
   function row(r) {
     var s = ymd(r.startDate), e = ymd(r.endDate);
     var nights = r.nights + " nights" + (r.allowSeven ? " · 7-night option" : "") + (r.lastNights ? " · end of the " + r.parentNights + "-night retreat" : "");
-    var full = r.freeBeds <= 0;
+    // full: no bed left, or the team set the retreat to Full in the admin (beds may still show free); only open or limited sells
+    var full = r.freeBeds <= 0 || (r.status !== "open" && r.status !== "limited");
     var pills = "";
     if (r.salePercent && !full) {
       pills += '<span class="' + PILL + ' bg-gold/15 text-[#9a6d1c]">' + SPARKLE + esc(r.saleLabel || "Special offer") + " · " + esc(r.salePercent) + "% off</span>";
