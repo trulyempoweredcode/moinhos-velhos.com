@@ -32,7 +32,7 @@
 
   function row(r) {
     var s = ymd(r.startDate), e = ymd(r.endDate);
-    var nights = r.nights + " nights" + (r.allowSeven ? " · 7-night option" : "") + (r.lastNights ? " · end of the " + r.parentNights + "-night retreat" : "");
+    var nights = r.nights + " nights" + (r.allowSeven ? " · 7-night option" : "") + (r.lastNights ? (r.label != null ? (r.label ? " · " + esc(r.label) : "") : " · end of the " + r.parentNights + "-night retreat") : "");
     // full: no bed left, or the team set the retreat to Full in the admin (beds may still show free); only open or limited sells
     var full = r.freeBeds <= 0 || (r.status !== "open" && r.status !== "limited");
     var pills = "";
