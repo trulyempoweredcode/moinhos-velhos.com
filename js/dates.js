@@ -32,7 +32,7 @@
 
   function row(r) {
     var s = ymd(r.startDate), e = ymd(r.endDate);
-    var nights = r.nights + " nights" + (r.allowSeven ? " · 7-night option" : "");
+    var nights = r.nights + " nights" + (r.allowSeven ? " · 7-night option" : "") + (r.lastNights ? " · end of the " + r.parentNights + "-night retreat" : "");
     var full = r.freeBeds <= 0;
     var pills = "";
     if (r.salePercent && !full) {
@@ -57,7 +57,7 @@
   }
 
   function month(g, open) {
-    var n = g.items.length;
+    var n = g.items.filter(function (r) { return !r.lastNights; }).length;   // a 3-night line is part of its retreat, not another one
     return '<details class="group bg-white rounded-2xl border border-ink/5 open:border-brand/40 transition-colors"' + (open ? " open" : "") + ">" +
       '<summary class="flex items-center justify-between gap-4 cursor-pointer list-none px-6 py-5 [&amp;::-webkit-details-marker]:hidden">' +
       '<span class="flex items-center gap-3"><span class="font-display text-2xl font-semibold text-brand-ink">' + MONTHS[g.m] + " " + g.y + "</span>" +
@@ -67,9 +67,15 @@
   }
 
   function renderDates(box, list) {
-    var groups = [], last = null;
-    list.slice().sort(function (a, b) { return a.startDate < b.startDate ? -1 : 1; }).forEach(function (r) {
-      var p = ymd(r.startDate), key = p.y * 12 + p.m;
+    var groups = [], last = null, starts = {};
+    list.forEach(function (r) { starts[r.id] = r.startDate; });
+    // a 3-night line (the last 3 nights of a 10-night retreat) sits straight under its retreat, in its retreat's month
+    var at = function (r) { return (r.parentId && starts[r.parentId]) || r.startDate; };
+    list.slice().sort(function (a, b) {
+      if (at(a) !== at(b)) { return at(a) < at(b) ? -1 : 1; }
+      return (a.lastNights ? 1 : 0) - (b.lastNights ? 1 : 0);
+    }).forEach(function (r) {
+      var p = ymd(at(r)), key = p.y * 12 + p.m;
       if (!last || last.key !== key) { last = { key: key, y: p.y, m: p.m, items: [] }; groups.push(last); }
       last.items.push(r);
     });
@@ -85,7 +91,7 @@
         html += '<h3 class="text-xs uppercase tracking-[0.2em] text-brand-deep font-semibold pt-6">More dates</h3>';
       }
       html += month(g, open);
-      if (open) { shown += g.items.length; }
+      if (open) { shown += g.items.filter(function (r) { return !r.lastNights; }).length; }
     });
     box.innerHTML = html;
   }
