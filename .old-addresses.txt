@@ -621,3 +621,25 @@
 /zapping.htm
 /accommodation/
 /costs-and-dates/
+/Platinum Healing-Moinhos Velhos programs.html
+/_historical/
+/ana-mar/
+/anne-pires/
+/bo-django/
+/book-here/
+/chris-lloyd-pack/
+/debby-van-tegelen/
+/ed-van-tegelen/
+/frank-jensen/
+/janni-jensen/
+/karen-lloyd-pack/
+/kelly robinson.html
+/mel-lister/
+/richard-brook/
+/sakshin-de-groot/
+/social/
+/sonia-scholz/
+/ten best detox retreats.html
+/trixie-denneborg/
+/videos/
+/yevhenia-tatarovska/
